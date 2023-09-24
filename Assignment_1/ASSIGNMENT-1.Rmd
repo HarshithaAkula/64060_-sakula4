@@ -1,0 +1,74 @@
+---
+title: "FML ASSIGNMENT-1"
+author: "Sai Harshitha Akula"
+date: "2023-09-23"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+
+netflixdataset <- read.csv("C://Users//saiha//Downloads//netflixdataset//All Ended Netflix Original Shows.csv" , nrows = 70)
+# The data has been imported from https://www.kaggle.com/datasets/aminatl/all-ended-netflix-originals?resource=download
+```
+
+```{r}
+mode(netflixdataset$Episodes)
+```
+```{r}
+median(netflixdataset$Seasons)
+```
+```{r}
+mean(netflixdataset$Seasons)
+```
+```{r}
+max(netflixdataset$Seasons)
+```
+```{r}
+sd(netflixdataset$Seasons)
+#These values represent descriptive statistics for a selection of quantitative variables.
+```
+```{r}
+#The above values shows mode, median, mean, maximum and standard deviation for the quantitative variables.
+```
+
+```{r}
+table(netflixdataset$Title)
+```
+```{r}
+str(netflixdataset$Premiere.Date)
+#These values represents categorical descriptive analysis of variables.
+```
+```{r}
+netflixdataset_transformed <- (netflixdataset$Seasons - mean(netflixdataset$Seasons)/median(netflixdataset$Seasons))
+netflixdataset_transformed
+```
+
+```{r}
+# Transformation of variables has been done above.
+```
+
+```{r}
+hist(netflixdataset$Seasons)
+```
+
+```{r}
+#The above graphical representation is a histogram.
+```
+
+
+```{r}
+x <- netflixdataset$Seasons
+y <- netflixdataset$Episodes
+plot(x,y, main = "Scatterplot", xlab = "Seasons", ylab = "Episodes")
+```
+```{r}
+#The above graphical representation is a scatterplot.
+#The selected variables are Episodes and Seasons.
+```
+
+
+
+
+
+
