@@ -1,0 +1,171 @@
+---
+title: "FML ASSIGNMENT - 4"
+author: "Sai Harshitha Akula"
+date: "2023-11-19"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+#install.packages("factoextra")
+#install.packages("cowplot")
+#install.packages("flexclust")
+#install.packages("cluster")
+#install.packages("NbClust")
+```
+```{r}
+#Loading required packages.
+library(factoextra)
+library(cowplot)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(flexclust)
+library(cluster)
+library(NbClust)
+```
+```{r}
+#Importing the dataset.
+PharmaceuticalsData <- read.csv("C:/Users/saiha/OneDrive/Documents/R PROGRAMMING/Pharmaceuticals.csv")
+```
+```{r}
+head(PharmaceuticalsData)
+colMeans(is.na(PharmaceuticalsData))
+row.names(PharmaceuticalsData) <- PharmaceuticalsData[,2]
+PharmaceuticalsData <- PharmaceuticalsData[,-2]
+```
+```{r}
+#Summary of the dataset.
+summary(PharmaceuticalsData)
+```
+```{r}
+dim(PharmaceuticalsData)
+```
+```{r}
+colMeans(is.na(PharmaceuticalsData))
+
+```
+#a) Performing a cluster analysis involves making several decisions to ensure the process is meaningful and relevant to the underlying data structure. In the context of clustering 21 firms using only numerical variables (1 to 9).
+
+```{r}
+#In our analysis, we narrow our focus to a subset of the complete dataset, specifically emphasizing numerical variables. This strategic decision allows us to hone in on quantitative aspects and exclude non-numeric features, streamlining the clustering process
+```
+```{r}
+#Excluding the variable "Symbol" and the final three categorical variables in the dataset.
+PharmaceuticalsData1 <- PharmaceuticalsData[,-c(1,11:13)]
+```
+```{r}
+#In this step, the dissimilarity between each observation is computed. To ensure accurate results, the data needs to be adjusted because the default Euclidean distance measure, which is sensitive to scale, is utilized.
+```
+```{r}
+#Normalising the data
+norm.PharmaceuticalsData1 <- scale(PharmaceuticalsData1)
+
+#Measuring and plotting the distance
+dist <- get_dist(norm.PharmaceuticalsData1)
+fviz_dist(dist)
+```
+
+```{r}
+#The graph shows that as we move along the diagonal, the color becomes less intense, reaching zero at the center because it represents the distance between two observations.
+
+#The Elbow chart and the Silhouette Method are helpful tools for figuring out how many clusters to use in a k-means model when no external factors are influencing the decision. The Elbow chart shows how increasing the number of clusters reduces the differences within each cluster. On the other hand, the Silhouette Method evaluates how well an item's cluster aligns with the clusters of other items, helping to determine the optimal number of clusters for the data.
+```
+```{r}
+Pharma_WSS <- fviz_nbclust(norm.PharmaceuticalsData1, kmeans, method = "wss") + labs(subtitle = "Elbow Method")
+Pharma_Silho <- fviz_nbclust(norm.PharmaceuticalsData1, kmeans, method = "silhouette")
+plot_grid(Pharma_WSS, Pharma_Silho) + labs(subtitle = "Silhouette Method")
+
+```
+```{r}
+#The elbow method suggests that the optimal number of clusters, k, is 2, based on the point where the line starts to bend. However, the Silhouette Method indicates that k should be 5. Despite these differences, I have decided to use the k-means method with k set to 5 for my analysis.
+```
+```{r}
+#Using k-means method with k=5.
+set.seed(123)
+K_Means.PharmaceuticalsData.optimal <- kmeans(norm.PharmaceuticalsData1, centers = 5, nstart = 50)
+K_Means.PharmaceuticalsData.optimal$centers
+```
+```{r}
+K_Means.PharmaceuticalsData.optimal$size
+```
+```{r}
+K_Means.PharmaceuticalsData.optimal$withinss
+```
+
+```{r}
+fviz_cluster(K_Means.PharmaceuticalsData.optimal, data = norm.PharmaceuticalsData1)
+```
+```{r}
+#Using the data, we can categorize the firms into five clusters based on their distance from the central tendencies. Cluster 4 stands out for its high Market Capital, while Cluster 2 is notable for a high Beta, and Cluster 5 exhibits a low Asset Turnover. Additionally, it's worth noting that Cluster 1 encompasses the most enterprises, while Cluster 3 consists of only two. Examining the within-cluster sum of squared distances provides insights into the dispersion of data; for instance, Cluster 1 (21.9) is less internally consistent than Cluster 3 (2.8). Visualizing the algorithm's output allows us to easily observe the distinct groups formed by the data.
+```
+
+#b).Interpreting the clusters with respect to the numerical variables used in forming the clusters.
+
+```{r}
+#I decided to rerun the model with only three clusters to gain a more comprehensive understanding of the cluster analysis. Having just two clusters raised concerns about potentially overlooking important features in the data.
+```
+
+```{r}
+#Using k-means with k=3.
+set.seed(123)
+K_Means.PharmaceuticalsData <- kmeans(norm.PharmaceuticalsData1, centers = 3, nstart = 50)
+K_Means.PharmaceuticalsData$centers
+```
+```{r}
+K_Means.PharmaceuticalsData$size
+```
+```{r}
+K_Means.PharmaceuticalsData$withinss
+```
+
+```{r}
+fviz_cluster(K_Means.PharmaceuticalsData, data = norm.PharmaceuticalsData1)
+```
+```{r}
+#The analysis has led to the identification and categorization of clusters. Specifically, there are four data points in cluster 1, eleven data points in cluster 2, and six data points in cluster 3.
+```
+```{r}
+#To view the cluster plot-
+clusplot(norm.PharmaceuticalsData1,K_Means.PharmaceuticalsData$cluster,color = TRUE,shade =TRUE, labels = 2,lines = 0)
+```
+
+
+#c). Is there a pattern in the clusters with respect to the numerical variables (10 to 12)? (those not used in forming the clusters)
+
+```{r}
+#To examine trends in the data, I opt to use bar charts to visually represent how firms are distributed across clusters based on the last three categorical variables: Median Recommendation, Location, and Stock Exchange
+```
+```{r}
+PharmaceuticalsData2 <-  PharmaceuticalsData %>% select(c(11,12,13)) %>% 
+    mutate(Cluster = K_Means.PharmaceuticalsData$cluster)
+```
+```{r}
+Median_Rec <- ggplot(PharmaceuticalsData2, mapping = aes(factor(Cluster), fill=Median_Recommendation)) +
+  geom_bar(position = 'dodge') +
+  labs(x='Clusters', y='Frequency')
+Location <- ggplot(PharmaceuticalsData2, mapping = aes(factor(Cluster), fill=Location)) +
+  geom_bar(position = 'dodge') + 
+  labs(x='Clusters', y='Frequency')
+Exchange <- ggplot(PharmaceuticalsData2, mapping = aes(factor(Cluster), fill=Exchange)) +
+  geom_bar(position = 'dodge') + 
+  labs(x='Clusters', y='Frequency')
+plot_grid(Median_Rec, Location, Exchange)
+```
+```{r}
+#The chart clearly shows that most companies in cluster 3 are from the United States and all of them have a "Hold" recommendation for their shares. Additionally, these companies are exclusively traded on the New York Stock Exchange. In cluster 2, we've selected stocks with a "Moderate Buy" recommendation, and there are only two companies listed on exchanges other than the NYSE, such as AMEX and NASDAQ. Cluster 1 consists of four firms located in four different countries, and interestingly, their stocks are all traded on the NYSE.
+```
+
+#d). Assigning meaningful names to each cluster based on the characteristics of the firms can be accomplished by considering the distinctive features captured by the numerical variables. The labels should reflect the common traits shared by the firms within each cluster, making it easier to interpret and communicate the essence of each group.
+
+#Ans).Cluster 1:
+These companies are termed as "overvalued international firms" because they operate globally, are listed on the NYSE, have low Net Profit Margins, and high Price/Earnings ratios. Despite their high market valuations, their current earnings may not justify such high stock prices. To sustain their stock value, they need to invest and increase earnings to meet investor expectations.
+
+Cluster 2:
+This group is identified as a "growing and leveraged firm." They have "Moderate buy" evaluations, low asset turnover and Return on Assets (ROA), high leverage, and are expected to experience revenue growth. Although currently not very profitable and carrying significant debt, investors see potential in them and are willing to wait for future growth.
+
+Cluster 3:
+These companies are characterized as "mature US firms" because they are based in the United States, listed on the NYSE, and have received "Hold" ratings. Their status suggests a stable and mature phase of development in the business.
