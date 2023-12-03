@@ -1,0 +1,213 @@
+---
+title: "FML ASSIGNMENT-5"
+author: "Sai Harshitha Akula"
+date: "2023-12-02"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+#Installing the required packages.
+```{r}
+#install.packages("purr") 
+#It provides a functional programming approach to iterating, mapping, and manipulating data structures.
+
+#install.packages("GGally")
+#It provides enhanced functionalities for exploring and visualizing relationships within multivariate datasets.
+
+#install.packages("pvclust")
+#The pvclust package is particularly useful when we want to assess the reliability of the clusters obtained through hierarchical clustering by incorporating bootstrap resampling techniques.
+
+#install.packages("fpc")
+# It provides a range of functions and tools that are particularly useful for working with clustering algorithms and evaluating clustering results. 
+```
+#Loading the required libraries.
+```{r}
+library(dplyr)
+library(purrr)
+library(GGally)
+library(pvclust)
+library(fpc)
+library(cluster)
+```
+
+#Importing the dataset.
+```{r}
+Cereals <- read.csv("C:/Users/saiha/OneDrive/Documents/R PROGRAMMING/Cereals.csv")
+Cereals1<-read.csv("C:/Users/saiha/OneDrive/Documents/R PROGRAMMING/Cereals.csv")
+```
+
+#Structure of the dataset.
+```{r}
+str(Cereals)
+```
+```{r}
+sum(is.na(Cereals))
+```
+#Removing any instances of missing values within the dataset.
+```{r}
+Cereals <- na.omit(Cereals)
+Cereals1<-na.omit(Cereals1)
+sum(is.na(Cereals))
+```
+#Transforming the cereal names into row names to facilitate the subsequent visualization of clusters.
+```{r}
+rownames(Cereals) <- Cereals$name
+rownames(Cereals1) <- Cereals1$name
+```
+
+#Excluding the "name" column as it no longer contributes any meaningful information.
+```{r}
+Cereals$name = NULL
+Cereals1$name = NULL
+```
+
+#Before applying any distance measure, it is essential to normalize the data as variables with broader ranges can disproportionately impact the distance calculation.
+```{r}
+Cereals <- scale(Cereals[,3:15])
+```
+
+#Intending to employ the Euclidean distance metric for conducting hierarchical clustering on the dataset.
+```{r}
+# computing the Euclidean distance matrix for the dataset using the "euclidean" method for distance calculation.
+d <- dist(Cereals, method = "euclidean")
+# initiating hierarchical clustering using the "complete" linkage method based on the dissimilarity matrix D. 
+HC_complete <- hclust(d, method = "complete" )
+# Plotting the obtained dendrogram.
+plot(HC_complete, cex = 0.6, hang = -1)
+```
+```{r}
+#Using the agnes function from the cluster package to perform agglomerative hierarchical clustering with the "single" linkage method on a dataset.
+library(cluster)
+HC_single <- agnes(Cereals, method = "single")
+
+#Generating a dendrogram plot for the hierarchical clustering result obtained from the agnes function.
+pltree(HC_single, cex = 0.6, hang = -1, main = "Dendrogram of agnes")
+```
+```{r}
+#Using the agnes function from the cluster package to perform agglomerative hierarchical clustering with the "average" linkage method on a dataset.
+HC_average <- agnes(Cereals, method = "average")
+
+#Generating a dendrogram plot.
+pltree(HC_average, cex = 0.6, hang = -1, main = "Dendrogram of agnes")
+```
+```{r}
+#Using the agnes function from the cluster package to perform agglomerative hierarchical clustering with the "ward" linkage method on a dataset.
+HC_Ward <- agnes(Cereals, method = "ward")
+
+#Generating a dendrogram plot.
+pltree(HC_Ward, cex = 0.6, hang = -1, main = "Dendrogram of agnes")
+```
+#Computing the Agnes coefficient for each methodology.
+```{r}
+library(purrr)
+# Representing different linkage methods used in hierarchical clustering. 
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+# Function for computing the coefficient
+ac <- function(x) {
+  agnes(Cereals, method = x)$ac
+}
+map_dbl(m, ac) 
+```
+#So, from the above values we can see that "Ward" emerges as the most favorable linkage method, exhibiting a compelling agglomerative coefficient of 0.9046042.
+
+#Segment the dendrogram using the "cutree()" function to identify distinct sub-groups, commonly referred to as clusters.
+```{r}
+#Creating the distance matrix
+D <- dist(Cereals, method = "euclidean")
+
+# Using Ward method for Hierarchical clustering
+HC_Ward_cluster <- hclust(D, method = "ward.D2" )
+
+#Creating a plot to visualize hierarchical clustering.
+plot(HC_Ward_cluster, cex=0.6 )
+
+#Drawing rectangles around clusters in a hierarchical clustering dendrogram. 
+rect.hclust(HC_Ward_cluster,k=6,border = 1:6)
+```
+
+#Let's explore the distribution of data records across various clusters and understand the allocation patterns.
+```{r}
+# Cutting the tree into 6 groups.
+sub_group <- cutree(HC_Ward_cluster, k = 6)
+# Creating a frequency table, summarizing the counts of unique values.
+table(sub_group)
+```
+
+
+```{r}
+#install.packages("GGally")
+library(GGally)
+library(dplyr)
+Cereals1 %>% 
+select(calories, protein, fat, sodium, fiber, carbo, sugars, potass,vitamins,rating) %>% 
+ggcorr(palette = "RdBu", label = TRUE, label_round =  2)
+```
+
+#The pvclust() function from the pvclust package is designed for assessing the statistical significance of clusters generated through hierarchical clustering using multiscale bootstrap resampling. In this method, clusters with strong support from the data are assigned larger p-values. It's important to note that when using pvclust, the grouping is applied to columns rather than rows. Therefore, we have to transpose the data before employing this method for more accurate results.
+
+```{r}
+# Using Ward Hierarchical Clustering with Bootstrapped p values
+library(pvclust)
+```
+```{r}
+fit.pv <- pvclust(Cereals, method.hclust="ward.D2",
+               method.dist="euclidean")
+```
+```{r}
+#Creating a dendogram with p values
+plot(fit.pv) 
+# Adding rectangles around groups highly supported by the data
+pvrect(fit.pv, alpha=.95)
+```
+#The stability of each cluster in the original clustering is expressed through the average Jaccard coefficient across all bootstrap iterations. Clusters with a stability rating below 0.6 should be deemed unstable. When stability ratings fall between 0.6 and 0.75, the cluster can discern a pattern in the data, but there is not a robust consensus on the grouping of points. Notably stable clusters exhibit exceptional stability when their ratings surpass 0.85.
+
+#1.The optimal strategy involves maximizing the Jaccard bootstrap for each cluster, emphasizing robustness in cluster-wise assessments.
+
+#2.Minimizing the dissolution of clusters is advised to uphold their integrity effectively.
+
+#3.Striving to augment the number of recovered clusters while maintaining proximity to the original configuration as closely as feasible.
+
+#Running clusterboot() function
+```{r}
+#install.packages("fpc")
+library(fpc)
+library(cluster)
+Kbestp<-6
+clusterb_hclust <- clusterboot(Cereals,clustermethod=hclustCBI,method="ward.D2", k=Kbestp)
+summary(clusterb_hclust$result)
+```
+```{r}
+groups<-clusterb_hclust$result$partition
+head(data.frame(groups))
+```
+#Representing the mean values obtained through bootstrapping.
+```{r}
+clusterb_hclust$bootmean
+```
+#Determining the frequency with which each cluster is disassembled by default during the execution of clusterboot(), which, by default, conducts 100 bootstrap iterations.
+```{r}
+clusterb_hclust$bootbrd
+```
+#Retrieving the identified clusters from the results generated by the hclust() function.
+```{r}
+groups <- cutree(HC_Ward_cluster, k = 6)
+print_cluster <- function(labels, k) {
+for(i in 1:k) {
+print(paste("cluster", i))
+print(Cereals1[labels==i,c("mfr","calories","protein","fat","sodium","fiber","carbo","sugars","potass",
+                "vitamins","rating")])
+}
+}
+print_cluster(groups, 6)
+```
+-- I have opted to select clusters based on both statistical values and nutritional richness to formulate a health-conscious diet. It's crucial to note that this approach is entirely subjective, as there is no explicit mention of a defined metric or scale for constructing a healthy diet.
+
+-- Regarding the necessity of normalization, my stance is negative. Normalizing the data tends to diminish its magnitude, posing significant challenges for comprehensive analysis and decision-making.
+
+-- The clusters representing different levels of cereal diets showcase varying degrees of richness, adequacy, and deficiencies in nutrients. After segregating the data into six distinct groups, a thorough examination of these clusters is conducted, taking into account all relevant factors and variables.
+
+-- Despite Cluster 1 offering nutritionally sound guidelines for crafting a balanced diet, it does present limitations due to its relatively constrained options. On the contrary, Clusters 2 and 3 are discouraged for inclusion in a health-conscious meal plan due to their subpar ratings and elevated levels of fat and sugar content.
+
+-- Clusters 4 and 5 stand out for maintaining a well-balanced nutritional profile and receiving favorable ratings for consumer satisfaction. Consequently, these clusters emerge as optimal choices, particularly suitable for implementation in primary public schools' cafeterias.
